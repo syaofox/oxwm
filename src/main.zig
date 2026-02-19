@@ -2472,6 +2472,7 @@ fn apply_rules(display: *Display, client: *Client) void {
 
     client.is_floating = false;
     client.tags = 0;
+    var rule_focus = false;
 
     for (config.rules.items) |rule| {
         const class_matches = if (rule.class) |rc| std.mem.indexOf(u8, class_str, rc) != null else true;
@@ -2493,6 +2494,9 @@ fn apply_rules(display: *Display, client: *Client) void {
                     target = mon.next;
                 }
             }
+            if (rule.focus) {
+                rule_focus = true;
+            }
         }
     }
 
@@ -2506,6 +2510,14 @@ fn apply_rules(display: *Display, client: *Client) void {
     const monitor = client.monitor orelse return;
     if (client.tags == 0) {
         client.tags = monitor.tagset[monitor.sel_tags];
+    }
+
+    if (rule_focus and client.tags != 0) {
+        const monitor_tagset = monitor.tagset[monitor.sel_tags];
+        const is_tag_focused = (monitor_tagset & client.tags) == client.tags;
+        if (!is_tag_focused) {
+            view(display, client.tags);
+        }
     }
 }
 

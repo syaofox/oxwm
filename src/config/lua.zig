@@ -695,6 +695,7 @@ fn lua_rule_add(state: ?*c.lua_State) callconv(.c) c_int {
         .tags = 0,
         .is_floating = false,
         .monitor = -1,
+        .focus = false,
     };
 
     _ = c.lua_getfield(s, 1, "class");
@@ -733,6 +734,12 @@ fn lua_rule_add(state: ?*c.lua_State) callconv(.c) c_int {
     _ = c.lua_getfield(s, 1, "monitor");
     if (c.lua_type(s, -1) == c.LUA_TNUMBER) {
         rule.monitor = @intCast(c.lua_tointegerx(s, -1, null));
+    }
+    c.lua_settop(s, -2);
+
+    _ = c.lua_getfield(s, 1, "focus");
+    if (c.lua_type(s, -1) == c.LUA_TBOOLEAN) {
+        rule.focus = c.lua_toboolean(s, -1) != 0;
     }
     c.lua_settop(s, -2);
 

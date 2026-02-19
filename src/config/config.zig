@@ -56,6 +56,7 @@ pub const Rule = struct {
     tags: u32,
     is_floating: bool,
     monitor: i32,
+    focus: bool,
 };
 
 pub const Block_Type = enum {
