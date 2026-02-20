@@ -1,5 +1,6 @@
 const std = @import("std");
 const VERSION = "v0.11.2";
+const Atoms = @import("x11/atoms.zig").Atoms;
 const kchord = @import("keyboard/chord.zig");
 const display_mod = @import("x11/display.zig");
 const events = @import("x11/events.zig");
@@ -25,22 +26,8 @@ const Monitor = monitor_mod.Monitor;
 var running: bool = true;
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 
-var wm_protocols: xlib.Atom = 0;
-var wm_delete: xlib.Atom = 0;
-var wm_state: xlib.Atom = 0;
-var wm_take_focus: xlib.Atom = 0;
-
-var net_supported: xlib.Atom = 0;
-var net_wm_name: xlib.Atom = 0;
-var net_wm_state: xlib.Atom = 0;
-var net_wm_check: xlib.Atom = 0;
-var net_wm_state_fullscreen: xlib.Atom = 0;
-var net_active_window: xlib.Atom = 0;
-var net_wm_window_type: xlib.Atom = 0;
-var net_wm_window_type_dialog: xlib.Atom = 0;
-var net_client_list: xlib.Atom = 0;
-
-var wm_check_window: xlib.Window = 0;
+var atoms: Atoms = undefined;
+var wm_check_window: xlib.Window = undefined;
 
 var border_color_focused: c_ulong = 0x6dade3;
 var border_color_unfocused: c_ulong = 0x444444;
@@ -250,7 +237,11 @@ pub fn main() !void {
 
     std.debug.print("successfully became window manager\n", .{});
 
-    setup_atoms(&display);
+    const atoms_result = Atoms.init(display_global.?.handle, display_global.?.root);
+    atoms = atoms_result.atoms;
+    wm_check_window = atoms_result.check_window;
+    std.debug.print("atoms initialized with EWMH support\n", .{});
+
     setup_cursors(&display);
     client_mod.init(allocator);
     monitor_mod.init(allocator);
@@ -283,37 +274,6 @@ pub fn main() !void {
 
     lua.deinit();
     std.debug.print("oxwm exiting\n", .{});
-}
-
-fn setup_atoms(display: *Display) void {
-    wm_protocols = xlib.XInternAtom(display.handle, "WM_PROTOCOLS", xlib.False);
-    wm_delete = xlib.XInternAtom(display.handle, "WM_DELETE_WINDOW", xlib.False);
-    wm_state = xlib.XInternAtom(display.handle, "WM_STATE", xlib.False);
-    wm_take_focus = xlib.XInternAtom(display.handle, "WM_TAKE_FOCUS", xlib.False);
-
-    net_active_window = xlib.XInternAtom(display.handle, "_NET_ACTIVE_WINDOW", xlib.False);
-    net_supported = xlib.XInternAtom(display.handle, "_NET_SUPPORTED", xlib.False);
-    net_wm_name = xlib.XInternAtom(display.handle, "_NET_WM_NAME", xlib.False);
-    net_wm_state = xlib.XInternAtom(display.handle, "_NET_WM_STATE", xlib.False);
-    net_wm_check = xlib.XInternAtom(display.handle, "_NET_SUPPORTING_WM_CHECK", xlib.False);
-    net_wm_state_fullscreen = xlib.XInternAtom(display.handle, "_NET_WM_STATE_FULLSCREEN", xlib.False);
-    net_wm_window_type = xlib.XInternAtom(display.handle, "_NET_WM_WINDOW_TYPE", xlib.False);
-    net_wm_window_type_dialog = xlib.XInternAtom(display.handle, "_NET_WM_WINDOW_TYPE_DIALOG", xlib.False);
-    net_client_list = xlib.XInternAtom(display.handle, "_NET_CLIENT_LIST", xlib.False);
-
-    const utf8_string = xlib.XInternAtom(display.handle, "UTF8_STRING", xlib.False);
-
-    wm_check_window = xlib.XCreateSimpleWindow(display.handle, display.root, 0, 0, 1, 1, 0, 0, 0);
-    _ = xlib.XChangeProperty(display.handle, wm_check_window, net_wm_check, xlib.XA_WINDOW, 32, xlib.PropModeReplace, @ptrCast(&wm_check_window), 1);
-    _ = xlib.XChangeProperty(display.handle, wm_check_window, net_wm_name, utf8_string, 8, xlib.PropModeReplace, "oxwm", 6);
-    _ = xlib.XChangeProperty(display.handle, display.root, net_wm_check, xlib.XA_WINDOW, 32, xlib.PropModeReplace, @ptrCast(&wm_check_window), 1);
-
-    var net_atoms = [_]xlib.Atom{ net_supported, net_wm_name, net_wm_state, net_wm_check, net_wm_state_fullscreen, net_active_window, net_wm_window_type, net_wm_window_type_dialog, net_client_list };
-    _ = xlib.XChangeProperty(display.handle, display.root, net_supported, xlib.XA_ATOM, 32, xlib.PropModeReplace, @ptrCast(&net_atoms), net_atoms.len);
-
-    _ = xlib.XDeleteProperty(display.handle, display.root, net_client_list);
-
-    std.debug.print("atoms initialized with EWMH support\n", .{});
 }
 
 fn setup_cursors(display: *Display) void {
@@ -617,11 +577,11 @@ fn get_state(display: *Display, window: xlib.Window) c_long {
     const result = xlib.XGetWindowProperty(
         display.handle,
         window,
-        wm_state,
+        atoms.wm_state,
         0,
         2,
         xlib.False,
-        wm_state,
+        atoms.wm_state,
         &actual_type,
         &actual_format,
         &num_items,
@@ -629,7 +589,7 @@ fn get_state(display: *Display, window: xlib.Window) c_long {
         &prop,
     );
 
-    if (result != 0 or actual_type != wm_state or num_items < 1) {
+    if (result != 0 or actual_type != atoms.wm_state or num_items < 1) {
         if (prop != null) {
             _ = xlib.XFree(prop);
         }
@@ -823,7 +783,7 @@ fn manage(display: *Display, win: xlib.Window, window_attrs: *xlib.XWindowAttrib
     client_mod.attach_aside(client);
     client_mod.attach_stack(client);
 
-    _ = xlib.XChangeProperty(display.handle, display.root, net_client_list, xlib.XA_WINDOW, 32, xlib.PropModeAppend, @ptrCast(&client.window), 1);
+    _ = xlib.XChangeProperty(display.handle, display.root, atoms.net_client_list, xlib.XA_WINDOW, 32, xlib.PropModeAppend, @ptrCast(&client.window), 1);
     _ = xlib.XMoveResizeWindow(display.handle, client.window, client.x + 2 * display.screen_width(), client.y, @intCast(client.width), @intCast(client.height));
     set_client_state(display, client, NormalState);
 
@@ -1264,7 +1224,7 @@ fn kill_focused(display: *Display) void {
     const client = selected.sel orelse return;
     std.debug.print("killing window: 0x{x}\n", .{client.window});
 
-    if (!send_event(display, client, wm_delete)) {
+    if (!send_event(display, client, atoms.wm_delete)) {
         _ = xlib.XGrabServer(display.handle);
         _ = xlib.XKillClient(display.handle, client.window);
         _ = xlib.XSync(display.handle, xlib.False);
@@ -1282,11 +1242,11 @@ fn set_fullscreen(display: *Display, client: *Client, fullscreen: bool) void {
     const monitor = client.monitor orelse return;
 
     if (fullscreen and !client.is_fullscreen) {
-        var fullscreen_atom = net_wm_state_fullscreen;
+        var fullscreen_atom = atoms.net_wm_state_fullscreen;
         _ = xlib.XChangeProperty(
             display.handle,
             client.window,
-            net_wm_state,
+            atoms.net_wm_state,
             xlib.XA_ATOM,
             32,
             xlib.PropModeReplace,
@@ -1309,7 +1269,7 @@ fn set_fullscreen(display: *Display, client: *Client, fullscreen: bool) void {
         _ = xlib.XChangeProperty(
             display.handle,
             client.window,
-            net_wm_state,
+            atoms.net_wm_state,
             xlib.XA_ATOM,
             32,
             xlib.PropModeReplace,
@@ -1903,12 +1863,12 @@ fn handle_button_press(display: *Display, event: *xlib.XButtonEvent) void {
 fn handle_client_message(display: *Display, event: *xlib.XClientMessageEvent) void {
     const client = client_mod.window_to_client(event.window) orelse return;
 
-    if (event.message_type == net_wm_state) {
+    if (event.message_type == atoms.net_wm_state) {
         const action = event.data.l[0];
         const first_property = @as(xlib.Atom, @intCast(event.data.l[1]));
         const second_property = @as(xlib.Atom, @intCast(event.data.l[2]));
 
-        if (first_property == net_wm_state_fullscreen or second_property == net_wm_state_fullscreen) {
+        if (first_property == atoms.net_wm_state_fullscreen or second_property == atoms.net_wm_state_fullscreen) {
             const net_wm_state_remove = 0;
             const net_wm_state_add = 1;
             const net_wm_state_toggle = 2;
@@ -1921,7 +1881,7 @@ fn handle_client_message(display: *Display, event: *xlib.XClientMessageEvent) vo
                 set_fullscreen(display, client, !client.is_fullscreen);
             }
         }
-    } else if (event.message_type == net_active_window) {
+    } else if (event.message_type == atoms.net_active_window) {
         const selected = monitor_mod.selected_monitor orelse return;
         if (client != selected.sel and !client.is_urgent) {
             set_urgent(display, client, true);
@@ -2026,9 +1986,9 @@ fn handle_focus_in(display: *Display, event: *xlib.XFocusChangeEvent) void {
 fn set_focus(display: *Display, client: *Client) void {
     if (!client.never_focus) {
         _ = xlib.XSetInputFocus(display.handle, client.window, xlib.RevertToPointerRoot, xlib.CurrentTime);
-        _ = xlib.XChangeProperty(display.handle, display.root, net_active_window, xlib.XA_WINDOW, 32, xlib.PropModeReplace, @ptrCast(&client.window), 1);
+        _ = xlib.XChangeProperty(display.handle, display.root, atoms.net_active_window, xlib.XA_WINDOW, 32, xlib.PropModeReplace, @ptrCast(&client.window), 1);
     }
-    _ = send_event(display, client, wm_take_focus);
+    _ = send_event(display, client, atoms.wm_take_focus);
 }
 
 var last_motion_monitor: ?*Monitor = null;
@@ -2071,9 +2031,9 @@ fn handle_property_notify(display: *Display, event: *xlib.XPropertyEvent) void {
     } else if (event.atom == xlib.XA_WM_HINTS) {
         update_wm_hints(display, client);
         bar_mod.invalidate_bars();
-    } else if (event.atom == xlib.XA_WM_NAME or event.atom == net_wm_name) {
+    } else if (event.atom == xlib.XA_WM_NAME or event.atom == atoms.net_wm_name) {
         update_title(display, client);
-    } else if (event.atom == net_wm_window_type) {
+    } else if (event.atom == atoms.net_wm_window_type) {
         update_window_type(display, client);
     }
 }
@@ -2084,13 +2044,13 @@ fn unfocus_client(display: *Display, client: ?*Client, reset_input_focus: bool) 
     _ = xlib.XSetWindowBorder(display.handle, unfocus_target.window, border_color_unfocused);
     if (reset_input_focus) {
         _ = xlib.XSetInputFocus(display.handle, display.root, xlib.RevertToPointerRoot, xlib.CurrentTime);
-        _ = xlib.XDeleteProperty(display.handle, display.root, net_active_window);
+        _ = xlib.XDeleteProperty(display.handle, display.root, atoms.net_active_window);
     }
 }
 
 fn set_client_state(display: *Display, client: *Client, state: c_long) void {
     var data: [2]c_long = .{ state, xlib.None };
-    _ = xlib.c.XChangeProperty(display.handle, client.window, wm_state, wm_state, 32, xlib.PropModeReplace, @ptrCast(&data), 2);
+    _ = xlib.c.XChangeProperty(display.handle, client.window, atoms.wm_state, xlib.XA_ATOM, 32, xlib.PropModeReplace, @ptrCast(&data), 2);
 }
 
 fn update_numlock_mask(display: *Display) void {
@@ -2181,12 +2141,12 @@ fn focus(display: *Display, target_client: ?*Client) void {
         _ = xlib.XSetWindowBorder(display.handle, client.window, border_color_focused);
         if (!client.never_focus) {
             _ = xlib.XSetInputFocus(display.handle, client.window, xlib.RevertToPointerRoot, xlib.CurrentTime);
-            _ = xlib.XChangeProperty(display.handle, display.root, net_active_window, xlib.XA_WINDOW, 32, xlib.PropModeReplace, @ptrCast(&client.window), 1);
+            _ = xlib.XChangeProperty(display.handle, display.root, atoms.net_active_window, xlib.XA_WINDOW, 32, xlib.PropModeReplace, @ptrCast(&client.window), 1);
         }
-        _ = send_event(display, client, wm_take_focus);
+        _ = send_event(display, client, atoms.wm_take_focus);
     } else {
         _ = xlib.XSetInputFocus(display.handle, display.root, xlib.RevertToPointerRoot, xlib.CurrentTime);
-        _ = xlib.XDeleteProperty(display.handle, display.root, net_active_window);
+        _ = xlib.XDeleteProperty(display.handle, display.root, atoms.net_active_window);
     }
 
     const current_selmon = monitor_mod.selected_monitor orelse return;
@@ -2392,19 +2352,19 @@ fn update_wm_hints(display: *Display, client: *Client) void {
 }
 
 fn update_window_type(display: *Display, client: *Client) void {
-    const state = get_atom_prop(display, client, net_wm_state);
-    const window_type = get_atom_prop(display, client, net_wm_window_type);
+    const state = get_atom_prop(display, client, atoms.net_wm_state);
+    const window_type = get_atom_prop(display, client, atoms.net_wm_window_type);
 
-    if (state == net_wm_state_fullscreen) {
+    if (state == atoms.net_wm_state_fullscreen) {
         set_fullscreen(display, client, true);
     }
-    if (window_type == net_wm_window_type_dialog) {
+    if (window_type == atoms.net_wm_window_type_dialog) {
         client.is_floating = true;
     }
 }
 
 fn update_title(display: *Display, client: *Client) void {
-    if (!get_text_prop(display, client.window, net_wm_name, &client.name)) {
+    if (!get_text_prop(display, client.window, atoms.net_wm_name, &client.name)) {
         _ = get_text_prop(display, client.window, xlib.XA_WM_NAME, &client.name);
     }
     if (client.name[0] == 0) {
@@ -2514,13 +2474,13 @@ fn apply_rules(display: *Display, client: *Client) void {
 }
 
 fn update_client_list(display: *Display) void {
-    _ = xlib.XDeleteProperty(display.handle, display.root, net_client_list);
+    _ = xlib.XDeleteProperty(display.handle, display.root, atoms.net_client_list);
 
     var current_monitor = monitor_mod.monitors;
     while (current_monitor) |monitor| {
         var current_client = monitor.clients;
         while (current_client) |client| {
-            _ = xlib.XChangeProperty(display.handle, display.root, net_client_list, xlib.XA_WINDOW, 32, xlib.PropModeAppend, @ptrCast(&client.window), 1);
+            _ = xlib.XChangeProperty(display.handle, display.root, atoms.net_client_list, xlib.XA_WINDOW, 32, xlib.PropModeAppend, @ptrCast(&client.window), 1);
             current_client = client.next;
         }
         current_monitor = monitor.next;
@@ -2547,7 +2507,7 @@ fn send_event(display: *Display, client: *Client, protocol: xlib.Atom) bool {
         var event: xlib.XEvent = undefined;
         event.type = xlib.ClientMessage;
         event.xclient.window = client.window;
-        event.xclient.message_type = wm_protocols;
+        event.xclient.message_type = atoms.wm_protocols;
         event.xclient.format = 32;
         event.xclient.data.l[0] = @intCast(protocol);
         event.xclient.data.l[1] = xlib.CurrentTime;
