@@ -489,7 +489,7 @@ fn apply_config_values() void {
 
 fn init_monitor_gaps(mon: *Monitor) void {
     const any_gap_nonzero = config.gap_inner_h != 0 or config.gap_inner_v != 0 or
-                            config.gap_outer_h != 0 or config.gap_outer_v != 0;
+        config.gap_outer_h != 0 or config.gap_outer_v != 0;
 
     if (config.gaps_enabled and any_gap_nonzero) {
         mon.gap_inner_h = config.gap_inner_h;
