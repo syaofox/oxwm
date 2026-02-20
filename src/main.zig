@@ -1,5 +1,6 @@
 const std = @import("std");
 const VERSION = "v0.11.2";
+const kchord = @import("keyboard/chord.zig");
 const display_mod = @import("x11/display.zig");
 const events = @import("x11/events.zig");
 const xlib = @import("x11/xlib.zig");
@@ -70,11 +71,7 @@ var config_path_global: ?[]const u8 = null;
 var scroll_animation: animations.Scroll_Animation = .{};
 var animation_config: animations.Animation_Config = .{ .duration_ms = 150, .easing = .ease_out };
 
-var chord_keys: [4]config_mod.Key_Press = [_]config_mod.Key_Press{.{}} ** 4;
-var chord_index: u8 = 0;
-var chord_timestamp: i64 = 0;
-const chord_timeout_ms: i64 = 1000;
-var keyboard_grabbed: bool = false;
+var chord = kchord.ChordState{};
 
 var keybind_overlay: ?*overlay_mod.Keybind_Overlay = null;
 
@@ -900,16 +897,8 @@ fn handle_configure_request(display: *Display, event: *xlib.XConfigureRequestEve
     _ = xlib.XSync(display.handle, xlib.False);
 }
 
-fn reset_chord_state() void {
-    chord_index = 0;
-    chord_keys = [_]config_mod.Key_Press{.{}} ** 4;
-    chord_timestamp = 0;
-    if (keyboard_grabbed) {
-        if (display_global) |dsp| {
-            _ = xlib.XUngrabKeyboard(dsp.handle, xlib.CurrentTime);
-        }
-        keyboard_grabbed = false;
-    }
+fn reset_chord_state(display_handle: *xlib.Display) void {
+    chord.reset(display_handle);
 }
 
 fn handle_key_press(display: *Display, event: *xlib.XKeyEvent) void {
@@ -924,31 +913,26 @@ fn handle_key_press(display: *Display, event: *xlib.XKeyEvent) void {
     const clean_state = event.state & ~@as(c_uint, xlib.LockMask | xlib.Mod2Mask);
     const current_time = std.time.milliTimestamp();
 
-    if (chord_index > 0 and (current_time - chord_timestamp) > chord_timeout_ms) {
-        reset_chord_state();
+    if (chord.index > 0 and (current_time - chord.last_timestamp) > kchord.timeout_ms) {
+        reset_chord_state(display.handle);
     }
 
-    chord_keys[chord_index] = .{ .mod_mask = clean_state, .keysym = keysym };
-    chord_index += 1;
-    chord_timestamp = current_time;
+    _ = chord.push(.{ .mod_mask = clean_state, .keysym = keysym });
 
     for (config.keybinds.items) |keybind| {
         if (keybind.key_count == 0) continue;
 
-        if (keybind.key_count == chord_index) {
+        if (keybind.key_count == chord.index) {
             var matches = true;
-            var i: u8 = 0;
-            while (i < keybind.key_count) : (i += 1) {
-                if (chord_keys[i].keysym != keybind.keys[i].keysym or
-                    chord_keys[i].mod_mask != keybind.keys[i].mod_mask)
-                {
+            for (0..keybind.key_count) |i| {
+                if (chord.keys[i].keysym != keybind.keys[i].keysym or chord.keys[i].mod_mask != keybind.keys[i].mod_mask) {
                     matches = false;
                     break;
                 }
             }
             if (matches) {
                 execute_action(display, keybind.action, keybind.int_arg, keybind.str_arg);
-                reset_chord_state();
+                reset_chord_state(display.handle);
                 return;
             }
         }
@@ -956,13 +940,10 @@ fn handle_key_press(display: *Display, event: *xlib.XKeyEvent) void {
 
     var has_partial_match = false;
     for (config.keybinds.items) |keybind| {
-        if (keybind.key_count > chord_index) {
+        if (keybind.key_count > chord.index) {
             var matches = true;
-            var i: u8 = 0;
-            while (i < chord_index) : (i += 1) {
-                if (chord_keys[i].keysym != keybind.keys[i].keysym or
-                    chord_keys[i].mod_mask != keybind.keys[i].mod_mask)
-                {
+            for (0..chord.index) |i| {
+                if (chord.keys[i].keysym != keybind.keys[i].keysym or chord.keys[i].mod_mask != keybind.keys[i].mod_mask) {
                     matches = false;
                     break;
                 }
@@ -974,20 +955,10 @@ fn handle_key_press(display: *Display, event: *xlib.XKeyEvent) void {
         }
     }
 
-    if (has_partial_match and !keyboard_grabbed) {
-        const grab_result = xlib.XGrabKeyboard(
-            display.handle,
-            display.root,
-            xlib.True,
-            xlib.GrabModeAsync,
-            xlib.GrabModeAsync,
-            xlib.CurrentTime,
-        );
-        if (grab_result == xlib.GrabSuccess) {
-            keyboard_grabbed = true;
-        }
+    if (has_partial_match) {
+        chord.grab_keyboard(display.handle, display.root);
     } else if (!has_partial_match) {
-        reset_chord_state();
+        reset_chord_state(display.handle);
     }
 }
 
