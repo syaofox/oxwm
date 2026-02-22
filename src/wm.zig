@@ -523,7 +523,34 @@ pub const WindowManager = struct {
         }
     }
 
-    pub fn rebuild_bar_blocks(self: *WindowManager) void {
+    /// Reloads the configuration
+    ///
+    /// `load_fn` repopulates `self.config`
+    /// keys/buttons are unbound before reload and rebound after
+    pub fn reload_config(
+        self: *WindowManager,
+        load_fn: fn (*WindowManager) void,
+    ) void {
+        std.debug.print("reloading config...\n", .{});
+
+        self.ungrab_keybinds();
+
+        self.config.keybinds.clearRetainingCapacity();
+        self.config.buttons.clearRetainingCapacity();
+        self.config.rules.clearRetainingCapacity();
+        self.config.blocks.clearRetainingCapacity();
+
+        load_fn(self);
+
+        bar_mod.destroy_bars(self.bars, self.allocator, self.display.handle);
+        self.bars = null;
+        self.setup_bars();
+        self.rebuild_bar_blocks();
+
+        self.grab_keybinds();
+    }
+
+    fn rebuild_bar_blocks(self: *WindowManager) void {
         var current_bar = self.bars;
         while (current_bar) |bar| {
             bar.clear_blocks();

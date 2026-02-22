@@ -226,6 +226,29 @@ fn make_keybind_str(mod: u32, key: u64, action: config_mod.Action, str_arg: []co
     return kb;
 }
 
+/// Config-loading callback for wm.reload_config().
+/// Re-initialises Lua and loads the config file (or falls back to defaults).
+fn reload_load_config(wm: *WindowManager) void {
+    lua.deinit();
+    _ = lua.init(&wm.config);
+
+    const loaded = if (wm.config_path) |path|
+        lua.load_file(path)
+    else
+        lua.load_config();
+
+    if (loaded) {
+        if (wm.config_path) |path| {
+            std.debug.print("reloaded config from {s}\n", .{path});
+        } else {
+            std.debug.print("reloaded config from ~/.config/oxwm/config.lua\n", .{});
+        }
+    } else {
+        std.debug.print("reload failed, restoring defaults\n", .{});
+        initialize_default_config(&wm.config);
+    }
+}
+
 fn initialize_default_config(cfg: *config_mod.Config) void {
     const mod_key: u32 = 1 << 6;
     const shift_key: u32 = 1 << 0;
@@ -521,8 +544,8 @@ fn execute_action(action: config_mod.Action, int_arg: i32, str_arg: ?[]const u8,
             std.debug.print("quit keybind pressed\n", .{});
             wm.running = false;
         },
-        .reload_config => reload_config(wm),
-        .restart => reload_config(wm),
+        .reload_config => wm.reload_config(reload_load_config),
+        .restart => wm.reload_config(reload_load_config),
         .show_keybinds => {
             if (wm.overlay) |overlay| {
                 const mon = wm.selected_monitor orelse wm.monitors;
@@ -570,43 +593,6 @@ fn execute_action(action: config_mod.Action, int_arg: i32, str_arg: ?[]const u8,
         .scroll_left => scroll_layout(-1, wm),
         .scroll_right => scroll_layout(1, wm),
     }
-}
-
-fn reload_config(wm: *WindowManager) void {
-    std.debug.print("reloading config...\n", .{});
-
-    wm.ungrab_keybinds();
-
-    wm.config.keybinds.clearRetainingCapacity();
-    wm.config.buttons.clearRetainingCapacity();
-    wm.config.rules.clearRetainingCapacity();
-    wm.config.blocks.clearRetainingCapacity();
-
-    lua.deinit();
-    _ = lua.init(&wm.config);
-
-    const loaded = if (wm.config_path) |path|
-        lua.load_file(path)
-    else
-        lua.load_config();
-
-    if (loaded) {
-        if (wm.config_path) |path| {
-            std.debug.print("reloaded config from {s}\n", .{path});
-        } else {
-            std.debug.print("reloaded config from ~/.config/oxwm/config.lua\n", .{});
-        }
-    } else {
-        std.debug.print("reload failed, restoring defaults\n", .{});
-        initialize_default_config(&wm.config);
-    }
-
-    bar_mod.destroy_bars(wm.bars, gpa.allocator(), wm.display.handle);
-    wm.bars = null;
-    wm.setup_bars();
-    wm.rebuild_bar_blocks();
-
-    wm.grab_keybinds();
 }
 
 fn spawn_child_setup() void {
