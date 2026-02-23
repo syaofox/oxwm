@@ -2,8 +2,8 @@ const std = @import("std");
 const xlib = @import("xlib.zig");
 
 pub const DisplayError = error{
-    cannot_open_display,
-    another_wm_running,
+    CannotOpenDisplay,
+    AnotherWmRunning,
 };
 
 var wm_detected: bool = false;
@@ -14,7 +14,7 @@ pub const Display = struct {
     root: xlib.Window,
 
     pub fn open() DisplayError!Display {
-        const handle = xlib.XOpenDisplay(null) orelse return DisplayError.cannot_open_display;
+        const handle = xlib.XOpenDisplay(null) orelse return DisplayError.CannotOpenDisplay;
         const screen = xlib.XDefaultScreen(handle);
         const root = xlib.XRootWindow(handle, screen);
 
@@ -40,7 +40,7 @@ pub const Display = struct {
         _ = xlib.XSync(self.handle, xlib.False);
 
         if (wm_detected) {
-            return DisplayError.another_wm_running;
+            return DisplayError.AnotherWmRunning;
         }
 
         _ = xlib.XSetErrorHandler(onXError);
