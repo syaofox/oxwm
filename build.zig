@@ -1,4 +1,5 @@
 const std = @import("std");
+const zon = @import("build.zig.zon");
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
@@ -12,6 +13,10 @@ pub fn build(b: *std.Build) void {
             .optimize = optimize,
         }),
     });
+
+    const exe_options = b.addOptions();
+    exe_options.addOption([]const u8, "version", zon.version);
+    exe.root_module.addOptions("build_options", exe_options);
 
     exe.root_module.addAnonymousImport("templates/config.lua", .{
         .root_source_file = b.path("templates/config.lua"),

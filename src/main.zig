@@ -1,4 +1,5 @@
 const std = @import("std");
+const build_options = @import("build_options");
 
 const actions = @import("wm/actions.zig");
 const handlers = @import("wm/handlers.zig");
@@ -7,8 +8,6 @@ const config_mod = @import("config/config.zig");
 const lua = @import("config/lua.zig");
 
 const WindowManager = window_manager.WindowManager;
-
-const VERSION = "v0.11.2";
 
 fn print_help() void {
     std.debug.print(
@@ -128,7 +127,7 @@ pub fn main() !void {
             print_help();
             return;
         } else if (std.mem.eql(u8, arg, "-v") or std.mem.eql(u8, arg, "--version")) {
-            std.debug.print("{s}\n", .{VERSION});
+            std.debug.print("{s}\n", .{build_options.version});
             return;
         } else if (std.mem.eql(u8, arg, "--init")) {
             init_config(allocator);
