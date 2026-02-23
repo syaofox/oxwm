@@ -374,7 +374,7 @@ fn luaKeyBind(state: ?*c.lua_State) callconv(.c) c_int {
 
     const mod_mask = parseModifiers(s, 1);
     const key_str = getStringArg(s, 2) orelse return 0;
-    const keysym = keyNameToKeysym(key_str) orelse return 0;
+    const keysym = keynameToKeysym(key_str) orelse return 0;
 
     if (c.lua_type(s, 3) != c.LUA_TTABLE) return 0;
 
@@ -449,7 +449,7 @@ fn luaKeyChord(state: ?*c.lua_State) callconv(.c) c_int {
         };
         c.lua_settop(s, -2);
 
-        const keysym = keyNameToKeysym(key_str) orelse {
+        const keysym = keynameToKeysym(key_str) orelse {
             c.lua_settop(s, -2);
             return 0;
         };
@@ -1271,7 +1271,7 @@ fn parseAction(name: []const u8) ?Action {
     return null;
 }
 
-fn keyNameToKeysym(name: []const u8) ?u64 {
+fn keynameToKeysym(name: []const u8) ?u64 {
     const key_map = .{
         .{ "Return", 0xff0d },
         .{ "Enter", 0xff0d },
