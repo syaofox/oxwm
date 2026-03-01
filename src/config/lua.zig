@@ -43,7 +43,7 @@ pub fn loadFile(path: []const u8) bool {
     if (std.mem.lastIndexOfScalar(u8, path, '/')) |last_slash| {
         const dir = path[0..last_slash];
         var setup_buf: [600]u8 = undefined;
-        const setup_code = std.fmt.bufPrint(&setup_buf, "package.path = '{s}/?.lua;' .. package.path\x00", .{dir}) catch return false;
+        const setup_code = std.fmt.bufPrintZ(&setup_buf, "package.path = '{s}/?.lua;' .. package.path", .{dir}) catch return false;
         if (c.luaL_loadstring(state, setup_code.ptr) != 0 or c.lua_pcallk(state, 0, 0, 0, 0, null) != 0) {
             c.lua_settop(state, -2);
             return false;
