@@ -25,6 +25,7 @@
         packages = [
           pkgs.zig
           pkgs.zls
+          pkgs.zon2nix
           pkgs.alacritty
           pkgs.xorg-server
         ];
@@ -81,6 +82,6 @@
       };
     };
 
-    homeManagerModules.default = import ./hm.nix { inherit self; };
+    homeManagerModules.default = import ./hm.nix {inherit self;};
   };
 }

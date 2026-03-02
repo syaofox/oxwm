@@ -1,6 +1,7 @@
 {
   lib,
   stdenv,
+  callPackage,
   zig,
   pkg-config,
   libx11,
@@ -16,6 +17,8 @@ stdenv.mkDerivation (finalAttrs: {
   version = "${lib.substring 0 8 gitRev}";
 
   src = ./.;
+
+  deps = callPackage ./build.zig.zon.nix {};
 
   nativeBuildInputs = [zig.hook pkg-config];
 
@@ -33,6 +36,11 @@ stdenv.mkDerivation (finalAttrs: {
     install -Dm644 resources/oxwm.1 -t $out/share/man/man1
     install -Dm644 templates/oxwm.lua -t $out/share/oxwm
   '';
+
+  zigBuildFlags = [
+    "--system"
+    "${finalAttrs.deps}"
+  ];
 
   # tests require a running X server
   doCheck = false;
