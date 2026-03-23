@@ -572,6 +572,12 @@ pub fn resizemouse(wm: *WindowManager) void {
 
     core.restack(monitor, wm);
 
+    // If tiled_resize_mode is enabled and window is tiled, adjust mfact instead
+    if (wm.config.tiled_resize_mode and !client.is_floating) {
+        resizemouseTiled(wm, monitor);
+        return;
+    }
+
     if (!client.is_floating) {
         client.is_floating = true;
     }
@@ -633,6 +639,85 @@ pub fn resizemouse(wm: *WindowManager) void {
 
     _ = xlib.XUngrabPointer(wm.display.handle, xlib.CurrentTime);
     core.arrange(monitor, wm);
+}
+
+/// Resize tiled windows by adjusting mfact with mouse drag (like Super+H/L but with mouse)
+fn resizemouseTiled(wm: *WindowManager, monitor: *Monitor) void {
+    const grab_result = xlib.XGrabPointer(
+        wm.display.handle,
+        wm.display.root,
+        xlib.False,
+        xlib.ButtonPressMask | xlib.ButtonReleaseMask | xlib.PointerMotionMask,
+        xlib.GrabModeAsync,
+        xlib.GrabModeAsync,
+        xlib.None,
+        wm.cursors.resize,
+        xlib.CurrentTime,
+    );
+
+    if (grab_result != xlib.GrabSuccess) {
+        return;
+    }
+
+    // Get initial pointer position
+    var root_return: xlib.Window = undefined;
+    var child_return: xlib.Window = undefined;
+    var root_x: c_int = undefined;
+    var root_y: c_int = undefined;
+    var win_x: c_int = undefined;
+    var win_y: c_int = undefined;
+    var mask_return: c_uint = undefined;
+
+    _ = xlib.XQueryPointer(
+        wm.display.handle,
+        wm.display.root,
+        &root_return,
+        &child_return,
+        &root_x,
+        &root_y,
+        &win_x,
+        &win_y,
+        &mask_return,
+    );
+
+    const start_x = root_x;
+    const initial_mfact = monitor.mfact;
+
+    const total_width: f32 = @floatFromInt(monitor.win_w - 2 * monitor.gap_outer_v - monitor.gap_inner_v);
+
+    var event: xlib.XEvent = undefined;
+    var done = false;
+    var last_time: c_ulong = 0;
+
+    while (!done) {
+        _ = xlib.XNextEvent(wm.display.handle, &event);
+
+        switch (event.type) {
+            xlib.MotionNotify => {
+                const motion = &event.xmotion;
+                if ((motion.time - last_time) < (1000 / 60)) {
+                    continue;
+                }
+                last_time = motion.time;
+
+                const delta_x: f32 = @floatFromInt(motion.x_root - start_x);
+                const mfact_delta = delta_x / total_width;
+                const new_mfact = initial_mfact + mfact_delta;
+
+                if (new_mfact >= 0.05 and new_mfact <= 0.95) {
+                    monitor.mfact = new_mfact;
+                    monitor.pertag.mfacts[monitor.pertag.curtag] = new_mfact;
+                    core.arrange(monitor, wm);
+                }
+            },
+            xlib.ButtonRelease => {
+                done = true;
+            },
+            else => {},
+        }
+    }
+
+    _ = xlib.XUngrabPointer(wm.display.handle, xlib.CurrentTime);
 }
 
 /// Config-loading callback for wm.reloadConfig().

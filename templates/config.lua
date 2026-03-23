@@ -214,6 +214,8 @@ oxwm.key.bind({ modkey }, "N", oxwm.layout.cycle())
 -- Decrease/Increase master area width
 oxwm.key.bind({ modkey }, "H", oxwm.set_master_factor(-5))
 oxwm.key.bind({ modkey }, "L", oxwm.set_master_factor(5))
+-- Enable tiled resize mode: Mod+RMB drag adjusts mfact instead of floating
+-- oxwm.tiled_resize_mode(true)
 -- Increment/Decrement number of master windows
 oxwm.key.bind({ modkey }, "I", oxwm.inc_num_master(1))
 oxwm.key.bind({ modkey }, "P", oxwm.inc_num_master(-1))

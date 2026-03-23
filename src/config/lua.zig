@@ -315,6 +315,9 @@ fn registerMiscFunctions(state: *c.lua_State) void {
     c.lua_pushcfunction(state, luaAutoTile);
     c.lua_setfield(state, -2, "auto_tile");
 
+    c.lua_pushcfunction(state, luaTiledResizeMode);
+    c.lua_setfield(state, -2, "tiled_resize_mode");
+
     c.lua_pushcfunction(state, luaQuit);
     c.lua_setfield(state, -2, "quit");
 
@@ -1050,6 +1053,13 @@ fn luaAutoTile(state: ?*c.lua_State) callconv(.c) c_int {
     const cfg = config orelse return 0;
     const s = state orelse return 0;
     cfg.auto_tile = c.lua_toboolean(s, 1) != 0;
+    return 0;
+}
+
+fn luaTiledResizeMode(state: ?*c.lua_State) callconv(.c) c_int {
+    const cfg = config orelse return 0;
+    const s = state orelse return 0;
+    cfg.tiled_resize_mode = c.lua_toboolean(s, 1) != 0;
     return 0;
 }
 

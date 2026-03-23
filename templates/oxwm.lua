@@ -41,6 +41,10 @@ function oxwm.set_tags(tags) end
 ---@param enabled boolean Enable or disable auto-tiling
 function oxwm.auto_tile(enabled) end
 
+---Enable or disable tiled resize mode (Mod+RMB adjusts mfact instead of floating)
+---@param enabled boolean Enable or disable tiled resize mode
+function oxwm.tiled_resize_mode(enabled) end
+
 ---Set layout symbol override
 ---@param name string Layout name (e.g., "tiling", "normie", "tabbed", "grid", "monocle")
 ---@param symbol string Symbol to display (e.g., "[T]", "[F]", "[=]")
