@@ -48,20 +48,11 @@ pub const Netspeed = struct {
 
         var rx_buf: [32]u8 = undefined;
         var tx_buf: [32]u8 = undefined;
-        var rx_unit_buf: [8]u8 = undefined;
-        var tx_unit_buf: [8]u8 = undefined;
 
-        const rx_val = humanBytes(rx_speed, &rx_buf, &rx_unit_buf);
-        const tx_val = humanBytes(tx_speed, &tx_buf, &tx_unit_buf);
+        const rx_str = humanBytes(rx_speed, &rx_buf);
+        const tx_str = humanBytes(tx_speed, &tx_buf);
 
-        return substitute(
-            self.format,
-            rx_val,
-            tx_val,
-            rx_unit_buf[0..memLen(rx_unit_buf)],
-            tx_unit_buf[0..memLen(tx_unit_buf)],
-            buffer,
-        );
+        return substitute(self.format, rx_str, tx_str, buffer);
     }
 
     pub fn interval(self: *Netspeed) u64 {
@@ -120,8 +111,8 @@ fn readSysCounter(iface: []const u8, counter: []const u8) ?u64 {
     return std.fmt.parseInt(u64, trimmed, 10) catch null;
 }
 
-fn humanBytes(bytes_per_sec: f64, val_buf: []u8, unit_buf: []u8) []const u8 {
-    const units = .{ "B/s", "KB/s", "MB/s", "GB/s", "TB/s" };
+fn humanBytes(bytes_per_sec: f64, buf: []u8) []const u8 {
+    const units = [_][]const u8{ "B/s", "KB/s", "MB/s", "GB/s", "TB/s" };
     var adjusted = bytes_per_sec;
     var unit_idx: usize = 0;
 
@@ -130,27 +121,14 @@ fn humanBytes(bytes_per_sec: f64, val_buf: []u8, unit_buf: []u8) []const u8 {
         unit_idx += 1;
     }
 
-    const val_str = std.fmt.bufPrint(val_buf, "{d:.2}", .{adjusted}) catch return "?";
     const unit_str = units[unit_idx];
-    @memcpy(unit_buf[0..unit_str.len], unit_str);
-    // Null-terminate for easy slicing
-    @memset(unit_buf[unit_str.len..], 0);
-
-    return val_str;
-}
-
-fn memLen(buf: []const u8) usize {
-    var i: usize = 0;
-    while (i < buf.len and buf[i] != 0) : (i += 1) {}
-    return i;
+    return std.fmt.bufPrint(buf, "{d:.2}{s}", .{ adjusted, unit_str }) catch "?";
 }
 
 fn substitute(
     format: []const u8,
     rx: []const u8,
     tx: []const u8,
-    rx_unit: []const u8,
-    tx_unit: []const u8,
     buffer: []u8,
 ) []const u8 {
     var pos: usize = 0;
@@ -165,12 +143,6 @@ fn substitute(
             } else if (std.mem.startsWith(u8, rest, "{tx}")) blk: {
                 i += 4;
                 break :blk tx;
-            } else if (std.mem.startsWith(u8, rest, "{rx_unit}")) blk: {
-                i += 9;
-                break :blk rx_unit;
-            } else if (std.mem.startsWith(u8, rest, "{tx_unit}")) blk: {
-                i += 9;
-                break :blk tx_unit;
             } else if (std.mem.startsWith(u8, rest, "{}")) blk: {
                 i += 2;
                 break :blk rx;
@@ -204,12 +176,6 @@ fn substituteFallback(format: []const u8, buffer: []u8) []const u8 {
                 break :blk na;
             } else if (std.mem.startsWith(u8, rest, "{tx}")) blk: {
                 i += 4;
-                break :blk na;
-            } else if (std.mem.startsWith(u8, rest, "{rx_unit}")) blk: {
-                i += 9;
-                break :blk na;
-            } else if (std.mem.startsWith(u8, rest, "{tx_unit}")) blk: {
-                i += 9;
                 break :blk na;
             } else if (std.mem.startsWith(u8, rest, "{}")) blk: {
                 i += 2;
