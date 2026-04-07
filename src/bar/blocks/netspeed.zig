@@ -152,7 +152,7 @@ fn substitute(
 }
 
 fn substituteFallback(format: []const u8, buffer: []u8) []const u8 {
-    const na = "N/A";
+    const na = "-";
     var pos: usize = 0;
     var i: usize = 0;
 
