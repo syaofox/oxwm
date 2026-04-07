@@ -774,6 +774,12 @@ pub fn configBlockToBarBlock(cfg: config_mod.Block) blocks_mod.Block {
             cfg.underline,
         ),
         .systray => blocks_mod.Block.initStatic("", 0, false),
+        .cpu => blocks_mod.Block.initCpu(
+            cfg.format,
+            cfg.interval,
+            cfg.color,
+            cfg.underline,
+        ),
     };
     block.click = cfg.click;
     return block;
