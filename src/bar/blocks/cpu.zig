@@ -54,7 +54,7 @@ pub const Cpu = struct {
             self.prev_idle = idle;
             self.prev_total = total;
             self.initialized = true;
-            return buffer[0..0];
+            return substitute(self.format, "--", buffer);
         }
 
         const total_delta = total - self.prev_total;
