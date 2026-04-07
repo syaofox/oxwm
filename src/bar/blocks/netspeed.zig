@@ -43,14 +43,11 @@ pub const Netspeed = struct {
         self.prev_rx = rx_bytes;
         self.prev_tx = tx_bytes;
 
-        const rx_speed = @as(f64, @floatFromInt(rx_delta)) / @as(f64, @floatFromInt(self.interval_secs));
-        const tx_speed = @as(f64, @floatFromInt(tx_delta)) / @as(f64, @floatFromInt(self.interval_secs));
+        var rx_buf: [16]u8 = undefined;
+        var tx_buf: [16]u8 = undefined;
 
-        var rx_buf: [32]u8 = undefined;
-        var tx_buf: [32]u8 = undefined;
-
-        const rx_str = humanBytes(rx_speed, &rx_buf);
-        const tx_str = humanBytes(tx_speed, &tx_buf);
+        const rx_str = toMbps(rx_delta, self.interval_secs, &rx_buf);
+        const tx_str = toMbps(tx_delta, self.interval_secs, &tx_buf);
 
         return substitute(self.format, rx_str, tx_str, buffer);
     }
@@ -111,18 +108,9 @@ fn readSysCounter(iface: []const u8, counter: []const u8) ?u64 {
     return std.fmt.parseInt(u64, trimmed, 10) catch null;
 }
 
-fn humanBytes(bytes_per_sec: f64, buf: []u8) []const u8 {
-    const units = [_][]const u8{ "B/s", "KB/s", "MB/s", "GB/s", "TB/s" };
-    var adjusted = bytes_per_sec;
-    var unit_idx: usize = 0;
-
-    while (adjusted >= 1024.0 and unit_idx < units.len - 1) {
-        adjusted /= 1024.0;
-        unit_idx += 1;
-    }
-
-    const unit_str = units[unit_idx];
-    return std.fmt.bufPrint(buf, "{d:.2}{s}", .{ adjusted, unit_str }) catch "?";
+fn toMbps(bytes: u64, interval_secs: u64, buf: []u8) []const u8 {
+    const mbps = (@as(f64, @floatFromInt(bytes)) * 8.0) / (@as(f64, @floatFromInt(interval_secs)) * 1000000.0);
+    return std.fmt.bufPrint(buf, "{d:.2}", .{mbps}) catch "?";
 }
 
 fn substitute(
