@@ -9,6 +9,7 @@ pub const Battery = @import("battery.zig").Battery;
 pub const CpuTemp = @import("cpu_temp.zig").CpuTemp;
 pub const Cpu = @import("cpu.zig").Cpu;
 pub const Gpu = @import("gpu.zig").Gpu;
+pub const Netspeed = @import("netspeed.zig").Netspeed;
 
 pub const Block = struct {
     data: Data,
@@ -29,6 +30,7 @@ pub const Block = struct {
         cpu_temp: CpuTemp,
         cpu: Cpu,
         gpu: Gpu,
+        netspeed: Netspeed,
     };
 
     pub fn initStatic(text: []const u8, col: c_ulong, ul: bool) Block {
@@ -128,6 +130,16 @@ pub const Block = struct {
         };
     }
 
+    pub fn initNetspeed(format: []const u8, interface: []const u8, interval_secs: u64, col: c_ulong, ul: bool) Block {
+        return .{
+            .data = .{ .netspeed = Netspeed.init(format, interface, interval_secs, col) },
+            .last_update = 0,
+            .cached_content = undefined,
+            .cached_len = 0,
+            .underline = ul,
+        };
+    }
+
     pub fn update(self: *Block, io: std.Io, gpa: std.mem.Allocator) bool {
         const interval_secs = self.interval();
         if (interval_secs == 0) return false;
@@ -149,6 +161,7 @@ pub const Block = struct {
             .cpu_temp => |*c| c.content(io, &self.cached_content),
             .cpu => |*c| c.content(&self.cached_content),
             .gpu => |*g| g.content(&self.cached_content),
+            .netspeed => |*n| n.content(&self.cached_content),
         };
 
         self.cached_len = result.len;
@@ -165,6 +178,7 @@ pub const Block = struct {
             .cpu_temp => |*c| c.interval(),
             .cpu => |*c| c.interval(),
             .gpu => |*g| g.interval(),
+            .netspeed => |*n| n.interval(),
         };
     }
 
@@ -178,6 +192,7 @@ pub const Block = struct {
             .cpu_temp => |c| c.color,
             .cpu => |c| c.color,
             .gpu => |g| g.color,
+            .netspeed => |n| n.color,
         };
     }
 

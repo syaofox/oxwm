@@ -70,6 +70,7 @@ pub const BlockType = enum {
     systray,
     cpu,
     gpu,
+    netspeed,
 };
 
 pub const ClickTarget = enum {
@@ -170,6 +171,7 @@ pub const Block = struct {
     format_full: ?[]const u8 = null,
     battery_name: ?[]const u8 = null,
     thermal_zone: ?[]const u8 = null,
+    interface: ?[]const u8 = null,
     click: ?ClickAction = null,
 };
 
