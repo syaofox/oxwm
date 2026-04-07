@@ -745,6 +745,12 @@ pub fn configBlockToBarBlock(cfg: config_mod.Block) blocks_mod.Block {
             cfg.color,
             cfg.underline,
         ),
+        .cpu => blocks_mod.Block.initCpu(
+            cfg.format,
+            cfg.interval,
+            cfg.color,
+            cfg.underline,
+        ),
     };
     block.click = cfg.click;
     return block;
