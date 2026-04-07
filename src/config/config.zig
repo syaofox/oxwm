@@ -69,6 +69,7 @@ pub const BlockType = enum {
     cpu_temp,
     systray,
     cpu,
+    gpu,
 };
 
 pub const ClickTarget = enum {
