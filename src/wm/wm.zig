@@ -751,6 +751,12 @@ pub fn configBlockToBarBlock(cfg: config_mod.Block) blocks_mod.Block {
             cfg.color,
             cfg.underline,
         ),
+        .gpu => blocks_mod.Block.initGpu(
+            cfg.format,
+            cfg.interval,
+            cfg.color,
+            cfg.underline,
+        ),
     };
     block.click = cfg.click;
     return block;

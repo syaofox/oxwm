@@ -297,6 +297,9 @@ fn registerBarModule(state: *c.lua_State) void {
     c.lua_pushcfunction(state, luaBarBlockCpu);
     c.lua_setfield(state, -2, "cpu");
 
+    c.lua_pushcfunction(state, luaBarBlockGpu);
+    c.lua_setfield(state, -2, "gpu");
+
     c.lua_setfield(state, -2, "block");
 
     c.lua_setfield(state, -2, "bar");
@@ -887,6 +890,8 @@ fn parseBlockConfig(state: *c.lua_State, idx: c_int) ?Block {
         c.lua_settop(state, -2);
     } else if (std.mem.eql(u8, block_type_str, "Cpu")) {
         block.block_type = .cpu;
+    } else if (std.mem.eql(u8, block_type_str, "Gpu")) {
+        block.block_type = .gpu;
     } else {
         return null;
     }
@@ -1002,6 +1007,12 @@ fn luaBarBlockBattery(state: ?*c.lua_State) callconv(.c) c_int {
 fn luaBarBlockCpu(state: ?*c.lua_State) callconv(.c) c_int {
     const s = state orelse return 0;
     createBlockTable(s, "Cpu", null);
+    return 1;
+}
+
+fn luaBarBlockGpu(state: ?*c.lua_State) callconv(.c) c_int {
+    const s = state orelse return 0;
+    createBlockTable(s, "Gpu", null);
     return 1;
 }
 

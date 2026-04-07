@@ -8,6 +8,7 @@ pub const Shell = @import("shell.zig").Shell;
 pub const Battery = @import("battery.zig").Battery;
 pub const CpuTemp = @import("cpu_temp.zig").CpuTemp;
 pub const Cpu = @import("cpu.zig").Cpu;
+pub const Gpu = @import("gpu.zig").Gpu;
 
 pub const Block = struct {
     data: Data,
@@ -27,6 +28,7 @@ pub const Block = struct {
         battery: Battery,
         cpu_temp: CpuTemp,
         cpu: Cpu,
+        gpu: Gpu,
     };
 
     pub fn initStatic(text: []const u8, col: c_ulong, ul: bool) Block {
@@ -116,6 +118,16 @@ pub const Block = struct {
         };
     }
 
+    pub fn initGpu(format: []const u8, interval_secs: u64, col: c_ulong, ul: bool) Block {
+        return .{
+            .data = .{ .gpu = Gpu.init(format, interval_secs, col) },
+            .last_update = 0,
+            .cached_content = undefined,
+            .cached_len = 0,
+            .underline = ul,
+        };
+    }
+
     pub fn update(self: *Block) bool {
         const interval_secs = self.interval();
         if (interval_secs == 0) return false;
@@ -135,6 +147,7 @@ pub const Block = struct {
             .battery => |*b| b.content(&self.cached_content),
             .cpu_temp => |*c| c.content(&self.cached_content),
             .cpu => |*c| c.content(&self.cached_content),
+            .gpu => |*g| g.content(&self.cached_content),
         };
 
         self.cached_len = result.len;
@@ -150,6 +163,7 @@ pub const Block = struct {
             .battery => |*b| b.interval(),
             .cpu_temp => |*c| c.interval(),
             .cpu => |*c| c.interval(),
+            .gpu => |*g| g.interval(),
         };
     }
 
@@ -162,6 +176,7 @@ pub const Block = struct {
             .battery => |b| b.color,
             .cpu_temp => |c| c.color,
             .cpu => |c| c.color,
+            .gpu => |g| g.color,
         };
     }
 
