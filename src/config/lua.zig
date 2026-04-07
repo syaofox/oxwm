@@ -300,6 +300,9 @@ fn registerBarModule(state: *c.lua_State) void {
     c.lua_pushcfunction(state, luaBarBlockGpu);
     c.lua_setfield(state, -2, "gpu");
 
+    c.lua_pushcfunction(state, luaBarBlockNetspeed);
+    c.lua_setfield(state, -2, "netspeed");
+
     c.lua_setfield(state, -2, "block");
 
     c.lua_setfield(state, -2, "bar");
@@ -892,6 +895,15 @@ fn parseBlockConfig(state: *c.lua_State, idx: c_int) ?Block {
         block.block_type = .cpu;
     } else if (std.mem.eql(u8, block_type_str, "Gpu")) {
         block.block_type = .gpu;
+    } else if (std.mem.eql(u8, block_type_str, "Netspeed")) {
+        block.block_type = .netspeed;
+        _ = c.lua_getfield(state, idx, "__arg");
+        if (c.lua_type(state, -1) == c.LUA_TTABLE) {
+            _ = c.lua_getfield(state, -1, "interface");
+            block.interface = dupeLuaString(state, -1);
+            c.lua_settop(state, -2);
+        }
+        c.lua_settop(state, -2);
     } else {
         return null;
     }
@@ -1013,6 +1025,37 @@ fn luaBarBlockCpu(state: ?*c.lua_State) callconv(.c) c_int {
 fn luaBarBlockGpu(state: ?*c.lua_State) callconv(.c) c_int {
     const s = state orelse return 0;
     createBlockTable(s, "Gpu", null);
+    return 1;
+}
+
+fn luaBarBlockNetspeed(state: ?*c.lua_State) callconv(.c) c_int {
+    const s = state orelse return 0;
+
+    c.lua_createtable(s, 0, 7);
+
+    _ = c.lua_pushstring(s, "Netspeed");
+    c.lua_setfield(s, -2, "__block_type");
+
+    _ = c.lua_getfield(s, 1, "format");
+    c.lua_setfield(s, -2, "format");
+
+    _ = c.lua_getfield(s, 1, "interval");
+    c.lua_setfield(s, -2, "interval");
+
+    _ = c.lua_getfield(s, 1, "color");
+    c.lua_setfield(s, -2, "color");
+
+    _ = c.lua_getfield(s, 1, "underline");
+    c.lua_setfield(s, -2, "underline");
+
+    _ = c.lua_getfield(s, 1, "click");
+    c.lua_setfield(s, -2, "click");
+
+    c.lua_createtable(s, 0, 1);
+    _ = c.lua_getfield(s, 1, "interface");
+    c.lua_setfield(s, -2, "interface");
+    c.lua_setfield(s, -2, "__arg");
+
     return 1;
 }
 

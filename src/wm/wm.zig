@@ -757,6 +757,13 @@ pub fn configBlockToBarBlock(cfg: config_mod.Block) blocks_mod.Block {
             cfg.color,
             cfg.underline,
         ),
+        .netspeed => blocks_mod.Block.initNetspeed(
+            cfg.format,
+            cfg.interface orelse "",
+            cfg.interval,
+            cfg.color,
+            cfg.underline,
+        ),
     };
     block.click = cfg.click;
     return block;
