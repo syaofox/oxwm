@@ -48,14 +48,14 @@ pub const Gpu = struct {
             return buffer[0..0];
         }
 
-        const getUtilFn = self.nvml.lookup(NvmlDeviceGetUtilizationRatesFn, "nvmlDeviceGetUtilizationRates") orelse return buffer[0..0];
-        const getMemFn = self.nvml.lookup(NvmlDeviceGetMemoryInfoFn, "nvmlDeviceGetMemoryInfo") orelse return buffer[0..0];
+        const getUtilFn = self.nvml.lookup(NvmlDeviceGetUtilizationRatesFn, "nvmlDeviceGetUtilizationRates") orelse return substituteFallback(self.format, buffer);
+        const getMemFn = self.nvml.lookup(NvmlDeviceGetMemoryInfoFn, "nvmlDeviceGetMemoryInfo") orelse return substituteFallback(self.format, buffer);
 
         var utilization: NvmlUtilization = undefined;
-        if (getUtilFn(self.device.?, &utilization) != NvmlSuccess) return buffer[0..0];
+        if (getUtilFn(self.device.?, &utilization) != NvmlSuccess) return substituteFallback(self.format, buffer);
 
         var memory: NvmlMemory = undefined;
-        if (getMemFn(self.device.?, &memory) != NvmlSuccess) return buffer[0..0];
+        if (getMemFn(self.device.?, &memory) != NvmlSuccess) return substituteFallback(self.format, buffer);
 
         const gpu_util = utilization.gpu;
         const vram_used_gb = @as(f32, @floatFromInt(memory.used)) / 1024.0 / 1024.0 / 1024.0;
@@ -131,6 +131,46 @@ pub const Gpu = struct {
         return self.color;
     }
 };
+
+fn substituteFallback(format: []const u8, buffer: []u8) []const u8 {
+    const na = "N/A";
+    var pos: usize = 0;
+    var i: usize = 0;
+
+    while (i < format.len) {
+        if (format[i] == '{' and i + 1 < format.len) {
+            const rest = format[i..];
+            const repl = if (std.mem.startsWith(u8, rest, "{gpu_util}")) blk: {
+                i += 10;
+                break :blk na;
+            } else if (std.mem.startsWith(u8, rest, "{vram_used}")) blk: {
+                i += 11;
+                break :blk na;
+            } else if (std.mem.startsWith(u8, rest, "{vram_total}")) blk: {
+                i += 12;
+                break :blk na;
+            } else if (std.mem.startsWith(u8, rest, "{vram_percent}")) blk: {
+                i += 14;
+                break :blk na;
+            } else if (std.mem.startsWith(u8, rest, "{}")) blk: {
+                i += 2;
+                break :blk na;
+            } else null;
+
+            if (repl) |r| {
+                if (pos + r.len > buffer.len) break;
+                @memcpy(buffer[pos..][0..r.len], r);
+                pos += r.len;
+                continue;
+            }
+        }
+        if (pos >= buffer.len) break;
+        buffer[pos] = format[i];
+        pos += 1;
+        i += 1;
+    }
+    return buffer[0..pos];
+}
 
 fn substitute(format: []const u8, buffer: []u8, values: struct {
     gpu_util: []const u8,
