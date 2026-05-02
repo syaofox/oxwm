@@ -194,7 +194,8 @@ pub const Bar = struct {
     }
 
     /// Redraws the bar if marked dirty. Tags are taken from `config.tags`
-    pub fn draw(self: *Bar, display: *xlib.Display, config: config_mod.Config) void {
+    /// `chord_hint` is displayed instead of the window title when non-null.
+    pub fn draw(self: *Bar, display: *xlib.Display, config: config_mod.Config, chord_hint: ?[]const u8) void {
         if (!self.needs_redraw) return;
 
         self.fillRect(display, 0, 0, self.width, self.height, self.bar_background);
@@ -253,22 +254,29 @@ pub const Bar = struct {
             x_position += self.textWidth(display, config.bar_sep_layout_title) + padding;
         }
 
-        if (monitor.sel) |client| {
+        const display_title: ?[]const u8 = if (chord_hint) |hint|
+            hint
+        else if (monitor.sel) |client| blk: {
             const title = std.mem.sliceTo(&client.name, 0);
             if (title.len > 0) {
-                var display_title: []const u8 = title;
                 var buf: [256]u8 = undefined;
                 if (config.active_window_title_max_chars > 0) {
                     const len = utf8Truncate(title, &buf, config.active_window_title_max_chars);
-                    display_title = buf[0..len];
+                    break :blk buf[0..len];
                 }
-                self.drawText(display, x_position, @divTrunc(self.height + self.font_height, 2) - 4, display_title, config.active_window_title_color);
-                x_position += self.textWidth(display, display_title) + padding;
+                break :blk title;
+            }
+            break :blk null;
+        } else null;
 
-                if (config.bar_sep_title_blocks.len > 0) {
-                    self.drawText(display, x_position, @divTrunc(self.height + self.font_height, 2) - 4, config.bar_sep_title_blocks, config.bar_sep_title_blocks_color);
-                    x_position += self.textWidth(display, config.bar_sep_title_blocks) + padding;
-                }
+        if (display_title) |title| {
+            const text_color = if (chord_hint != null) config.scheme_selected.foreground else config.active_window_title_color;
+            self.drawText(display, x_position, @divTrunc(self.height + self.font_height, 2) - 4, title, text_color);
+            x_position += self.textWidth(display, title) + padding;
+
+            if (config.bar_sep_title_blocks.len > 0) {
+                self.drawText(display, x_position, @divTrunc(self.height + self.font_height, 2) - 4, config.bar_sep_title_blocks, config.bar_sep_title_blocks_color);
+                x_position += self.textWidth(display, config.bar_sep_title_blocks) + padding;
             }
         }
 

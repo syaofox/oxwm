@@ -682,10 +682,13 @@ pub const WindowManager = struct {
 
             tickFn(self);
 
+            var chord_buf: [256]u8 = undefined;
+            const chord_hint = self.chord.formatHint(&chord_buf);
+
             var current_bar = self.bars;
             while (current_bar) |bar| {
                 bar.updateBlocks(self.io, self.allocator);
-                bar.draw(self.display.handle, self.config);
+                bar.draw(self.display.handle, self.config, chord_hint);
                 current_bar = bar.next;
             }
 

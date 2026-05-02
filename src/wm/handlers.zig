@@ -125,6 +125,24 @@ fn handleConfigureRequest(event: *xlib.XConfigureRequestEvent, wm: *WindowManage
     _ = xlib.XSync(wm.display.handle, xlib.False);
 }
 
+fn chordHasPartialMatch(wm: *WindowManager) bool {
+    for (wm.config.keybinds.items) |keybind| {
+        if (keybind.key_count > wm.chord.index) {
+            var matches = true;
+            for (0..wm.chord.index) |i| {
+                if (wm.chord.keys[i].keysym != keybind.keys[i].keysym or
+                    wm.chord.keys[i].mod_mask != keybind.keys[i].mod_mask)
+                {
+                    matches = false;
+                    break;
+                }
+            }
+            if (matches) return true;
+        }
+    }
+    return false;
+}
+
 fn handleKeyPress(event: *xlib.XKeyEvent, wm: *WindowManager) void {
     const keysym = xlib.XKeycodeToKeysym(wm.display.handle, @intCast(event.keycode), 0);
 
@@ -139,7 +157,15 @@ fn handleKeyPress(event: *xlib.XKeyEvent, wm: *WindowManager) void {
     }
 
     _ = wm.chord.push(wm.io, .{ .mod_mask = clean_state, .keysym = keysym });
+    wm.invalidateBars();
 
+    // 1. Partial matches (chords) take priority — wait for more keys
+    if (chordHasPartialMatch(wm)) {
+        wm.chord.grabKeyboard(wm.display.handle, wm.display.root);
+        return;
+    }
+
+    // 2. Exact matches (single keybinds)
     for (wm.config.keybinds.items) |keybind| {
         if (keybind.key_count == 0) continue;
 
@@ -161,26 +187,11 @@ fn handleKeyPress(event: *xlib.XKeyEvent, wm: *WindowManager) void {
         }
     }
 
-    var has_partial_match = false;
-    for (wm.config.keybinds.items) |keybind| {
-        if (keybind.key_count > wm.chord.index) {
-            var matches = true;
-            for (0..wm.chord.index) |i| {
-                if (wm.chord.keys[i].keysym != keybind.keys[i].keysym or
-                    wm.chord.keys[i].mod_mask != keybind.keys[i].mod_mask)
-                {
-                    matches = false;
-                    break;
-                }
-            }
-            if (matches) {
-                has_partial_match = true;
-                break;
-            }
-        }
-    }
+    // 3. No match — reset and try starting a new chord with this key
+    wm.chord.reset(wm.display.handle);
+    _ = wm.chord.push(.{ .mod_mask = clean_state, .keysym = keysym });
 
-    if (has_partial_match) {
+    if (chordHasPartialMatch(wm)) {
         wm.chord.grabKeyboard(wm.display.handle, wm.display.root);
     } else {
         wm.chord.reset(wm.display.handle);
@@ -202,8 +213,9 @@ fn cleanMask(mask: c_uint, wm: *WindowManager) c_uint {
 fn handleExpose(event: *xlib.XExposeEvent, wm: *WindowManager) void {
     if (event.count != 0) return;
     if (bar_mod.windowToBar(wm.bars, event.window)) |bar| {
+        var buf: [256]u8 = undefined;
         bar.invalidate();
-        bar.draw(wm.display.handle, wm.config);
+        bar.draw(wm.display.handle, wm.config, wm.chord.formatHint(&buf));
     }
 }
 
