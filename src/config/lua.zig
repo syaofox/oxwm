@@ -289,6 +289,15 @@ fn registerBarModule(state: *c.lua_State) void {
     c.lua_pushcfunction(state, luaBarSetActiveTitleMaxChars);
     c.lua_setfield(state, -2, "set_active_title_max_chars");
 
+    c.lua_pushcfunction(state, luaBarSetSeparatorTagLayout);
+    c.lua_setfield(state, -2, "set_separator_tag_layout");
+
+    c.lua_pushcfunction(state, luaBarSetSeparatorLayoutTitle);
+    c.lua_setfield(state, -2, "set_separator_layout_title");
+
+    c.lua_pushcfunction(state, luaBarSetSeparatorTitleBlocks);
+    c.lua_setfield(state, -2, "set_separator_title_blocks");
+
     c.lua_createtable(state, 0, 6);
 
     c.lua_pushcfunction(state, luaBarBlockRam);
@@ -992,6 +1001,42 @@ fn luaBarSetActiveTitleMaxChars(state: ?*c.lua_State) callconv(.c) c_int {
     const cfg = config orelse return 0;
     const s = state orelse return 0;
     cfg.active_window_title_max_chars = @intCast(c.lua_tointegerx(s, 1, null));
+    return 0;
+}
+
+fn luaBarSetSeparatorTagLayout(state: ?*c.lua_State) callconv(.c) c_int {
+    const cfg = config orelse return 0;
+    const s = state orelse return 0;
+    if (dupeLuaString(s, 1)) |sep| {
+        cfg.bar_sep_tag_layout = sep;
+    }
+    if (c.lua_type(s, 2) == c.LUA_TSTRING or c.lua_type(s, 2) == c.LUA_TNUMBER) {
+        cfg.bar_sep_tag_layout_color = parseColor(s, 2);
+    }
+    return 0;
+}
+
+fn luaBarSetSeparatorLayoutTitle(state: ?*c.lua_State) callconv(.c) c_int {
+    const cfg = config orelse return 0;
+    const s = state orelse return 0;
+    if (dupeLuaString(s, 1)) |sep| {
+        cfg.bar_sep_layout_title = sep;
+    }
+    if (c.lua_type(s, 2) == c.LUA_TSTRING or c.lua_type(s, 2) == c.LUA_TNUMBER) {
+        cfg.bar_sep_layout_title_color = parseColor(s, 2);
+    }
+    return 0;
+}
+
+fn luaBarSetSeparatorTitleBlocks(state: ?*c.lua_State) callconv(.c) c_int {
+    const cfg = config orelse return 0;
+    const s = state orelse return 0;
+    if (dupeLuaString(s, 1)) |sep| {
+        cfg.bar_sep_title_blocks = sep;
+    }
+    if (c.lua_type(s, 2) == c.LUA_TSTRING or c.lua_type(s, 2) == c.LUA_TNUMBER) {
+        cfg.bar_sep_title_blocks_color = parseColor(s, 2);
+    }
     return 0;
 }
 

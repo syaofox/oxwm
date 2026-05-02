@@ -239,9 +239,19 @@ pub const Bar = struct {
 
         x_position += padding;
 
+        if (config.bar_sep_tag_layout.len > 0) {
+            self.drawText(display, x_position, @divTrunc(self.height + self.font_height, 2) - 4, config.bar_sep_tag_layout, config.bar_sep_tag_layout_color);
+            x_position += self.textWidth(display, config.bar_sep_tag_layout) + padding;
+        }
+
         const layout_symbol = getLayoutSymbol(monitor.sel_lt, config);
         self.drawText(display, x_position, @divTrunc(self.height + self.font_height, 2) - 4, layout_symbol, self.scheme_normal.foreground);
         x_position += self.textWidth(display, layout_symbol) + padding;
+
+        if (config.bar_sep_layout_title.len > 0) {
+            self.drawText(display, x_position, @divTrunc(self.height + self.font_height, 2) - 4, config.bar_sep_layout_title, config.bar_sep_layout_title_color);
+            x_position += self.textWidth(display, config.bar_sep_layout_title) + padding;
+        }
 
         if (monitor.sel) |client| {
             const title = std.mem.sliceTo(&client.name, 0);
@@ -253,6 +263,12 @@ pub const Bar = struct {
                     display_title = buf[0..len];
                 }
                 self.drawText(display, x_position, @divTrunc(self.height + self.font_height, 2) - 4, display_title, config.active_window_title_color);
+                x_position += self.textWidth(display, display_title) + padding;
+
+                if (config.bar_sep_title_blocks.len > 0) {
+                    self.drawText(display, x_position, @divTrunc(self.height + self.font_height, 2) - 4, config.bar_sep_title_blocks, config.bar_sep_title_blocks_color);
+                    x_position += self.textWidth(display, config.bar_sep_title_blocks) + padding;
+                }
             }
         }
 

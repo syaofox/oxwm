@@ -207,6 +207,12 @@ oxwm.bar.set_scheme_urgent(colors.red, colors.bg, colors.red)
 -- oxwm.bar.set_active_title_color(colors.cyan)
 -- oxwm.bar.set_active_title_max_chars(40)
 
+-- Separators between bar zones: tag↔layout, layout↔title, title↔blocks
+-- Each takes a character and an optional color (defaults to scheme_normal.foreground)
+-- oxwm.bar.set_separator_tag_layout("┊", "#444444")
+-- oxwm.bar.set_separator_layout_title("┊", "#444444")
+-- oxwm.bar.set_separator_title_blocks("┊", "#444444")
+
 -------------------------------------------------------------------------------
 -- Keybindings
 -------------------------------------------------------------------------------
