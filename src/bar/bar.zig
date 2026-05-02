@@ -204,11 +204,14 @@ pub const Bar = struct {
             const tag_mask: u32 = @as(u32, 1) << @intCast(index);
             const is_selected = (current_tags & tag_mask) != 0;
             const is_occupied = hasClientsOnTag(monitor, tag_mask);
+            const is_urgent = hasUrgentOnTag(monitor, tag_mask);
 
             if (self.hide_vacant_tags and !is_occupied and !is_selected) continue;
 
             const scheme = if (is_selected)
                 self.scheme_selected
+            else if (is_urgent)
+                self.scheme_urgent
             else if (is_occupied)
                 self.scheme_occupied
             else
@@ -390,4 +393,13 @@ pub fn getSystray(bars: ?*Bar) ?*Systray {
         current = bar.next;
     }
     return null;
+}
+
+fn hasUrgentOnTag(monitor: *Monitor, tag_mask: u32) bool {
+    var current = monitor.clients;
+    while (current) |client| {
+        if (client.is_urgent and (client.tags & tag_mask) != 0) return true;
+        current = client.next;
+    }
+    return false;
 }
