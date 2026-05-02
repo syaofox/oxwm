@@ -251,7 +251,7 @@ fn registerRuleModule(state: *c.lua_State) void {
 }
 
 fn registerBarModule(state: *c.lua_State) void {
-    c.lua_createtable(state, 0, 10);
+    c.lua_createtable(state, 0, 12);
 
     c.lua_pushcfunction(state, luaBarSetFont);
     c.lua_setfield(state, -2, "set_font");
@@ -276,6 +276,12 @@ fn registerBarModule(state: *c.lua_State) void {
 
     c.lua_pushcfunction(state, luaBarSetPosition);
     c.lua_setfield(state, -2, "set_position");
+
+    c.lua_pushcfunction(state, luaBarSetBackground);
+    c.lua_setfield(state, -2, "set_background");
+
+    c.lua_pushcfunction(state, luaBarSetBorderWidth);
+    c.lua_setfield(state, -2, "set_border_width");
 
     c.lua_createtable(state, 0, 6);
 
@@ -952,6 +958,20 @@ fn luaBarSetHideVacantTags(state: ?*c.lua_State) callconv(.c) c_int {
     const cfg = config orelse return 0;
     const s = state orelse return 0;
     cfg.hide_vacant_tags = c.lua_toboolean(s, 1) != 0;
+    return 0;
+}
+
+fn luaBarSetBackground(state: ?*c.lua_State) callconv(.c) c_int {
+    const cfg = config orelse return 0;
+    const s = state orelse return 0;
+    cfg.bar_background = parseColor(s, 1);
+    return 0;
+}
+
+fn luaBarSetBorderWidth(state: ?*c.lua_State) callconv(.c) c_int {
+    const cfg = config orelse return 0;
+    const s = state orelse return 0;
+    cfg.bar_border_width = @intCast(c.lua_tointegerx(s, 1, null));
     return 0;
 }
 

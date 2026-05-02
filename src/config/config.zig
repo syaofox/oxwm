@@ -207,6 +207,8 @@ pub const Config = struct {
     auto_tile: bool = false,
     tag_back_and_forth: bool = false,
     hide_vacant_tags: bool = false,
+    bar_background: u32 = 0x1a1b26,
+    bar_border_width: i32 = 3,
     floating_position: FloatingPosition = .center,
     tiled_resize_mode: bool = false,
 

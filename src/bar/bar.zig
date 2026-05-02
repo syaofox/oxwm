@@ -39,6 +39,8 @@ pub const Bar = struct {
     scheme_occupied: ColorScheme,
     scheme_urgent: ColorScheme,
     hide_vacant_tags: bool,
+    bar_background: u32,
+    bar_border_width: i32,
 
     allocator: std.mem.Allocator,
     blocks: std.ArrayList(Block),
@@ -143,6 +145,8 @@ pub const Bar = struct {
             .scheme_occupied = config.scheme_occupied,
             .scheme_urgent = config.scheme_urgent,
             .hide_vacant_tags = config.hide_vacant_tags,
+            .bar_background = config.bar_background,
+            .bar_border_width = config.bar_border_width,
             .allocator = allocator,
             .blocks = .empty,
             .needs_redraw = true,
@@ -193,7 +197,7 @@ pub const Bar = struct {
     pub fn draw(self: *Bar, display: *xlib.Display, config: config_mod.Config) void {
         if (!self.needs_redraw) return;
 
-        self.fillRect(display, 0, 0, self.width, self.height, self.scheme_normal.background);
+        self.fillRect(display, 0, 0, self.width, self.height, self.bar_background);
 
         var x_position: i32 = 0;
         const padding: i32 = 8;
@@ -225,7 +229,7 @@ pub const Bar = struct {
             }
 
             if (is_selected) {
-                self.fillRect(display, x_position, self.height - 3, tag_width, 3, scheme.border);
+                self.fillRect(display, x_position, self.height - self.bar_border_width, tag_width, self.bar_border_width, scheme.border);
             }
 
             const text_y = @divTrunc(self.height + self.font_height, 2) - 4;

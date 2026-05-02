@@ -353,6 +353,14 @@ function oxwm.bar.set_scheme_selected(foreground, background, underline) end
 ---@param underline string|integer Underline color
 function oxwm.bar.set_scheme_urgent(foreground, background, underline) end
 
+---Set the overall bar background color (overrides scheme_normal background)
+---@param background string|integer Background color
+function oxwm.bar.set_background(background) end
+
+---Set the border width (height) of the selected tag underline in pixels
+---@param width integer Border width in pixels (default: 3)
+function oxwm.bar.set_border_width(width) end
+
 ---Hide tags that have no windows and are not currently selected
 ---@param hide boolean Whether to hide vacant tags
 function oxwm.bar.set_hide_vacant_tags(hide) end
