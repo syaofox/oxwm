@@ -246,7 +246,13 @@ pub const Bar = struct {
         if (monitor.sel) |client| {
             const title = std.mem.sliceTo(&client.name, 0);
             if (title.len > 0) {
-                self.drawText(display, x_position, @divTrunc(self.height + self.font_height, 2) - 4, title, self.scheme_normal.foreground);
+                var display_title: []const u8 = title;
+                var buf: [256]u8 = undefined;
+                if (config.active_window_title_max_chars > 0) {
+                    const len = utf8Truncate(title, &buf, config.active_window_title_max_chars);
+                    display_title = buf[0..len];
+                }
+                self.drawText(display, x_position, @divTrunc(self.height + self.font_height, 2) - 4, display_title, config.active_window_title_color);
             }
         }
 
@@ -357,6 +363,32 @@ pub const Bar = struct {
         var extents: xlib.XGlyphInfo = undefined;
         xlib.XftTextExtentsUtf8(display, self.font, text.ptr, @intCast(text.len), &extents);
         return extents.xOff;
+    }
+
+    fn utf8Truncate(text: []const u8, buf: []u8, max_chars: u32) usize {
+        var char_count: u32 = 0;
+        var byte_i: usize = 0;
+
+        while (byte_i < text.len and char_count < max_chars) : (char_count += 1) {
+            const byte = text[byte_i];
+            byte_i += switch (byte) {
+                0b0...0b01111111 => 1,
+                0b110_00000...0b110_11111 => 2,
+                0b1110_0000...0b1110_1111 => 3,
+                0b11110_000...0b11110_111 => 4,
+                else => 1,
+            };
+        }
+
+        if (byte_i >= text.len) {
+            @memcpy(buf[0..text.len], text);
+            return text.len;
+        }
+
+        @memcpy(buf[0..byte_i], text[0..byte_i]);
+        const ellipsis = "…";
+        @memcpy(buf[byte_i..][0..ellipsis.len], ellipsis);
+        return byte_i + ellipsis.len;
     }
 };
 

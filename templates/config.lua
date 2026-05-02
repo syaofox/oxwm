@@ -203,6 +203,10 @@ oxwm.bar.set_scheme_urgent(colors.red, colors.bg, colors.red)
 -- Hide tags that have no windows and are not selected
 -- oxwm.bar.set_hide_vacant_tags(true)
 
+-- Active window title in bar (color and max chars before truncation)
+-- oxwm.bar.set_active_title_color(colors.cyan)
+-- oxwm.bar.set_active_title_max_chars(40)
+
 -------------------------------------------------------------------------------
 -- Keybindings
 -------------------------------------------------------------------------------

@@ -283,6 +283,12 @@ fn registerBarModule(state: *c.lua_State) void {
     c.lua_pushcfunction(state, luaBarSetBorderWidth);
     c.lua_setfield(state, -2, "set_border_width");
 
+    c.lua_pushcfunction(state, luaBarSetActiveTitleColor);
+    c.lua_setfield(state, -2, "set_active_title_color");
+
+    c.lua_pushcfunction(state, luaBarSetActiveTitleMaxChars);
+    c.lua_setfield(state, -2, "set_active_title_max_chars");
+
     c.lua_createtable(state, 0, 6);
 
     c.lua_pushcfunction(state, luaBarBlockRam);
@@ -972,6 +978,20 @@ fn luaBarSetBorderWidth(state: ?*c.lua_State) callconv(.c) c_int {
     const cfg = config orelse return 0;
     const s = state orelse return 0;
     cfg.bar_border_width = @intCast(c.lua_tointegerx(s, 1, null));
+    return 0;
+}
+
+fn luaBarSetActiveTitleColor(state: ?*c.lua_State) callconv(.c) c_int {
+    const cfg = config orelse return 0;
+    const s = state orelse return 0;
+    cfg.active_window_title_color = parseColor(s, 1);
+    return 0;
+}
+
+fn luaBarSetActiveTitleMaxChars(state: ?*c.lua_State) callconv(.c) c_int {
+    const cfg = config orelse return 0;
+    const s = state orelse return 0;
+    cfg.active_window_title_max_chars = @intCast(c.lua_tointegerx(s, 1, null));
     return 0;
 }
 

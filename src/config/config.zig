@@ -219,6 +219,9 @@ pub const Config = struct {
     layout_grid_symbol: []const u8 = "[#]",
     layout_dwindle_symbol: []const u8 = "[\\]",
 
+    active_window_title_color: u32 = 0xbbbbbb,
+    active_window_title_max_chars: u32 = 60,
+
     scheme_normal: ColorScheme = .{ .foreground = 0xbbbbbb, .background = 0x1a1b26, .border = 0x444444 },
     scheme_selected: ColorScheme = .{ .foreground = 0x0db9d7, .background = 0x1a1b26, .border = 0xad8ee6 },
     scheme_occupied: ColorScheme = .{ .foreground = 0x0db9d7, .background = 0x1a1b26, .border = 0x0db9d7 },
