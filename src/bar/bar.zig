@@ -243,10 +243,16 @@ pub const Bar = struct {
         self.drawText(display, x_position, @divTrunc(self.height + self.font_height, 2) - 4, layout_symbol, self.scheme_normal.foreground);
         x_position += self.textWidth(display, layout_symbol) + padding;
 
+        if (monitor.sel) |client| {
+            const title = std.mem.sliceTo(&client.name, 0);
+            if (title.len > 0) {
+                self.drawText(display, x_position, @divTrunc(self.height + self.font_height, 2) - 4, title, self.scheme_normal.foreground);
+            }
+        }
+
         const systray_width: i32 = if (self.systray) |tray| tray.width() else 0;
         var block_x: i32 = self.width - padding - systray_width;
         if (systray_width > 0) block_x -= padding;
-
         var block_index: usize = self.blocks.items.len;
         while (block_index > 0) {
             block_index -= 1;
