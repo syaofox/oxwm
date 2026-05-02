@@ -220,6 +220,10 @@ pub const Bar = struct {
             const tag_text_width = self.textWidth(display, tag);
             const tag_width = tag_text_width + padding * 2;
 
+            if (is_selected or is_urgent or is_occupied) {
+                self.fillRect(display, x_position, 0, tag_width, self.height, scheme.background);
+            }
+
             if (is_selected) {
                 self.fillRect(display, x_position, self.height - 3, tag_width, 3, scheme.border);
             }
