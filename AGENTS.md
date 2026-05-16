@@ -1,45 +1,29 @@
-# oxwm — agent instructions
+# AGENTS.md — dwm-arch
 
-## Build & dev
+Arch Linux DWM dotfiles & provisioning repo.
 
-| Command | What |
-|---|---|
-| `zig build` | Build (min Zig 0.15.2, see `build.zig.zon`) |
-| `zig build test` | Run all 3 test suites |
-| `zig build xephyr` | Launch in Xephyr 1280x800 on `:2` w/ `resources/test-config.lua` |
-| `zig build kill` | `pkill -9 Xephyr` + `pkill -9 oxwm` |
-| `zig build fmt` | `zig fmt src/` only |
-| `zig build clean` | Remove `zig-out/` and `.zig-cache/` |
-| `zig build run` | Run the built binary |
-| `nix develop` | Nix dev shell (zig, zls, zon2nix, alacritty, xorg-server) |
+# CRITICAL RULES - MUST FOLLOW
 
-Runtime flags: `oxwm --init` (create default config), `oxwm --validate` (validate config without starting WM), `oxwm --config <path>`, `oxwm --version`.
+## RESPONSES
 
-## Project facts
+- Keep responses concise and to the point - unless the user asks otherwise
 
-- **Pure Zig** — `resources/PKGBUILD` mentions Cargo/Rust but is a stale artifact; no Rust code remains.
-- **Config is Lua** (`~/.config/oxwm/config.lua`), hot-reloaded with `Mod+Shift+R`.
-- **No CI/CD** — no GitHub Actions, no pre-commit hooks, no Makefile.
-- **`.gitignore` ignores `*.md`** — `AGENTS.md` must be force-added (`git add -f AGENTS.md`) or `.gitignore` amended with `!AGENTS.md`.
+## PLANNING MODE
 
-## Architecture
+- Always ask clarifying questions
+- Never assume design, tech stack or features
+- Use deep-dive sub-agents to assist with research
+- Use deep-dive sub-agents to review the different aspects of your plan before presenting to the user
 
-```
-src/
-├── main.zig           Entry point, CLI arg parsing
-├── wm/                WindowManager core, event dispatch, actions
-├── config/            Config struct + Lua bridge (1531 lines)
-├── bar/               Status bar + modular blocks (battery, datetime, ram, etc.)
-├── layouts/           Tiling, monocle, floating, grid, scrolling
-├── x11/               Xlib/Xft/Xinerama Zig bindings
-├── client.zig         Window client management
-├── monitor.zig        Multi-monitor (RandR/Xinerama)
-├── overlay.zig        Keybind overlay
-└── animations.zig     Scroll animations
-```
+## CHANGE / EDIT MODE
 
-Tests in `tests/`: `main_tests.zig` (imports `config_tests.zig`), `lua_config_tests.zig` (loads `resources/test-config.lua`).
+- Never implement features yourself when possible - use sub-agents!
+- Identify changes from the plan that can be implemented in parallel, and use sub-agents to implement the features efficiently
+- When using sub-agents to implement features, act as a coordinator only
+- Use the best model for the task - premium models for complex tasks (like coding) and mid-tier models for simpler tasks, like documentation
+- After completing features (large or small), always run commands like lint, type check and next build to check code quality
 
-## Keybinds
+## 相关文档
 
-Default mod is Mod4 (Super). See `templates/config.lua` or `readme.org` for full table. Hot reload: `Mod+Shift+R`.
+- archlinux: https://wiki.archlinux.org/
+
