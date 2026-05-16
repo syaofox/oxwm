@@ -37,6 +37,12 @@ pub const Netspeed = struct {
             return substituteFallback(self.format, buffer);
         }
 
+        if (rx_bytes < self.prev_rx or tx_bytes < self.prev_tx) {
+            self.prev_rx = rx_bytes;
+            self.prev_tx = tx_bytes;
+            return substituteFallback(self.format, buffer);
+        }
+
         const rx_delta = rx_bytes - self.prev_rx;
         const tx_delta = tx_bytes - self.prev_tx;
 

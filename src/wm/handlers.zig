@@ -189,7 +189,7 @@ fn handleKeyPress(event: *xlib.XKeyEvent, wm: *WindowManager) void {
 
     // 3. No match — reset and try starting a new chord with this key
     wm.chord.reset(wm.display.handle);
-    _ = wm.chord.push(.{ .mod_mask = clean_state, .keysym = keysym });
+    _ = wm.chord.push(wm.io, .{ .mod_mask = clean_state, .keysym = keysym });
 
     if (chordHasPartialMatch(wm)) {
         wm.chord.grabKeyboard(wm.display.handle, wm.display.root);

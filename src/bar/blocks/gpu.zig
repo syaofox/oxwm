@@ -40,12 +40,7 @@ pub const Gpu = struct {
 
     pub fn content(self: *Gpu, buffer: []u8) []const u8 {
         if (!self.ensureNvml()) {
-            const na = "N/A";
-            if (buffer.len >= na.len) {
-                @memcpy(buffer[0..na.len], na);
-                return buffer[0..na.len];
-            }
-            return buffer[0..0];
+            return substituteFallback(self.format, buffer);
         }
 
         const getUtilFn = self.nvml.lookup(NvmlDeviceGetUtilizationRatesFn, "nvmlDeviceGetUtilizationRates") orelse return substituteFallback(self.format, buffer);
@@ -87,26 +82,16 @@ pub const Gpu = struct {
             self.nvml_available = false;
             return false;
         };
+        defer if (!self.nvml_loaded) self.nvml.close();
 
-        const nvmlInitFn = self.nvml.lookup(NvmlInitFn, "nvmlInit") orelse {
-            self.cleanup();
-            return false;
-        };
-        const getHandleFn = self.nvml.lookup(NvmlDeviceGetHandleByIndexFn, "nvmlDeviceGetHandleByIndex") orelse {
-            self.cleanup();
-            return false;
-        };
+        const nvmlInitFn = self.nvml.lookup(NvmlInitFn, "nvmlInit") orelse return false;
+        const getHandleFn = self.nvml.lookup(NvmlDeviceGetHandleByIndexFn, "nvmlDeviceGetHandleByIndex") orelse return false;
 
-        if (nvmlInitFn() != NvmlSuccess) {
-            self.cleanup();
-            return false;
-        }
+        if (nvmlInitFn() != NvmlSuccess) return false;
 
         var device: ?*anyopaque = null;
         if (getHandleFn(0, &device) != NvmlSuccess) {
-            const shutdownFn = self.nvml.lookup(NvmlShutdownFn, "nvmlShutdown") orelse return false;
-            _ = shutdownFn();
-            self.cleanup();
+            if (self.nvml.lookup(NvmlShutdownFn, "nvmlShutdown")) |shutdownFn| _ = shutdownFn();
             return false;
         }
 
@@ -121,6 +106,7 @@ pub const Gpu = struct {
             self.nvml_loaded = false;
         }
         self.device = null;
+        self.nvml_available = true;
     }
 
     pub fn interval(self: *Gpu) u64 {
