@@ -34,7 +34,6 @@ pub const Cpu = struct {
 
         var total: u64 = 0;
         var idle: u64 = 0;
-        var iowait: u64 = 0;
 
         var it = std.mem.tokenizeAny(u8, first_line, " \t");
         _ = it.next(); // "cpu"
@@ -46,7 +45,7 @@ pub const Cpu = struct {
             if (field_idx == 3) {
                 idle = val;
             } else if (field_idx == 4) {
-                iowait = val;
+                idle += val; // iowait is idle time
             }
         }
 

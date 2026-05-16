@@ -395,19 +395,23 @@ pub const Bar = struct {
 
         while (byte_i < text.len and char_count < max_chars) : (char_count += 1) {
             const byte = text[byte_i];
-            byte_i += switch (byte) {
+            const char_bytes: usize = switch (byte) {
                 0b0...0b01111111 => 1,
                 0b110_00000...0b110_11111 => 2,
                 0b1110_0000...0b1110_1111 => 3,
                 0b11110_000...0b11110_111 => 4,
                 else => 1,
             };
+            if (byte_i + char_bytes > buf.len) break;
+            byte_i += char_bytes;
         }
 
         if (byte_i >= text.len) {
             @memcpy(buf[0..text.len], text);
             return text.len;
         }
+
+        if (byte_i + 3 > buf.len) return byte_i;
 
         @memcpy(buf[0..byte_i], text[0..byte_i]);
         const ellipsis = "…";
