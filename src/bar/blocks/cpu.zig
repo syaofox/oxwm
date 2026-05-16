@@ -19,12 +19,12 @@ pub const Cpu = struct {
         };
     }
 
-    pub fn content(self: *Cpu, buffer: []u8) []const u8 {
-        const file = std.fs.openFileAbsolute("/proc/stat", .{}) catch return buffer[0..0];
-        defer file.close();
+    pub fn content(self: *Cpu, io: std.Io, buffer: []u8) []const u8 {
+        const file = std.Io.Dir.openFileAbsolute(io, "/proc/stat", .{}) catch return buffer[0..0];
+        defer file.close(io);
 
         var read_buffer: [1024]u8 = undefined;
-        const bytes_read = file.readAll(&read_buffer) catch return buffer[0..0];
+        const bytes_read = file.readStreaming(io, &.{&read_buffer}) catch return buffer[0..0];
         const data = read_buffer[0..bytes_read];
 
         var lines = std.mem.splitScalar(u8, data, '\n');

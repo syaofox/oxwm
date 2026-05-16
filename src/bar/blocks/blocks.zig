@@ -159,9 +159,9 @@ pub const Block = struct {
             .shell => |*s| s.content(io, gpa, &self.cached_content),
             .battery => |*b| b.content(io, &self.cached_content),
             .cpu_temp => |*c| c.content(io, &self.cached_content),
-            .cpu => |*c| c.content(&self.cached_content),
+            .cpu => |*c| c.content(io, &self.cached_content),
             .gpu => |*g| g.content(&self.cached_content),
-            .netspeed => |*n| n.content(&self.cached_content),
+            .netspeed => |*n| n.content(io, &self.cached_content),
         };
 
         self.cached_len = result.len;

@@ -21,14 +21,14 @@ pub const Netspeed = struct {
         };
     }
 
-    pub fn content(self: *Netspeed, buffer: []u8) []const u8 {
+    pub fn content(self: *Netspeed, io: std.Io, buffer: []u8) []const u8 {
         const iface = if (self.interface.len > 0)
             self.interface
         else
-            getDefaultInterface() orelse return buffer[0..0];
+            getDefaultInterface(io) orelse return buffer[0..0];
 
-        const rx_bytes = readSysCounter(iface, "rx_bytes") orelse return buffer[0..0];
-        const tx_bytes = readSysCounter(iface, "tx_bytes") orelse return buffer[0..0];
+        const rx_bytes = readSysCounter(io, iface, "rx_bytes") orelse return buffer[0..0];
+        const tx_bytes = readSysCounter(io, iface, "tx_bytes") orelse return buffer[0..0];
 
         if (!self.initialized) {
             self.prev_rx = rx_bytes;
@@ -67,12 +67,12 @@ pub const Netspeed = struct {
     }
 };
 
-fn getDefaultInterface() ?[]const u8 {
-    const file = std.fs.openFileAbsolute("/proc/net/route", .{}) catch return null;
-    defer file.close();
+fn getDefaultInterface(io: std.Io) ?[]const u8 {
+    const file = std.Io.Dir.openFileAbsolute(io, "/proc/net/route", .{}) catch return null;
+    defer file.close(io);
 
     var read_buf: [4096]u8 = undefined;
-    const bytes_read = file.readAll(&read_buf) catch return null;
+    const bytes_read = file.readStreaming(io, &.{&read_buf}) catch return null;
     const data = read_buf[0..bytes_read];
 
     var lines = std.mem.splitScalar(u8, data, '\n');
@@ -100,15 +100,15 @@ fn getDefaultInterface() ?[]const u8 {
     return null;
 }
 
-fn readSysCounter(iface: []const u8, counter: []const u8) ?u64 {
+fn readSysCounter(io: std.Io, iface: []const u8, counter: []const u8) ?u64 {
     var path_buf: [256]u8 = undefined;
     const path = std.fmt.bufPrint(&path_buf, "/sys/class/net/{s}/statistics/{s}", .{ iface, counter }) catch return null;
 
-    const file = std.fs.openFileAbsolute(path, .{}) catch return null;
-    defer file.close();
+    const file = std.Io.Dir.openFileAbsolute(io, path, .{}) catch return null;
+    defer file.close(io);
 
     var read_buf: [32]u8 = undefined;
-    const bytes_read = file.readAll(&read_buf) catch return null;
+    const bytes_read = file.readStreaming(io, &.{&read_buf}) catch return null;
     const trimmed = std.mem.trim(u8, read_buf[0..bytes_read], " \t\n\r");
 
     return std.fmt.parseInt(u64, trimmed, 10) catch null;
